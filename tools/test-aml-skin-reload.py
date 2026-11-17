@@ -322,7 +322,7 @@ void Reloads(bool paused){
     request={};frame.reset();old.reset();
   }
   manager.m_dvdClock.speed=0;
-  assert(manager.m_amlPresenter->ApplyControl({},{}));
+  Await([&]{return manager.m_amlPresenter->ApplyControl({},{});});
   Await([&]{return codec->polls>0;});
   assert(codec->releases==1&&codec->drops==0); // paused held frame survives repeated reloads
   manager.m_dvdClock.speed=1;
