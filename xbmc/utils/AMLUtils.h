@@ -219,6 +219,8 @@ bool aml_dv_deferred_disc_pending(const std::shared_ptr<const void>& session, bo
 // display-ready renderer continuation; neither is physical HDMI acknowledgement.
 bool aml_dv_output_transition_pending(const std::shared_ptr<const void>& session);
 void aml_dv_complete_output_transition(const std::shared_ptr<const void>& session);
+void aml_dv_begin_startup_output_transition(const std::shared_ptr<const void>& session,
+                                          bool startupBlackout);
 // Last resort, polled per GUI frame: engage a deferral no mode set took up.
 void aml_dv_engage_stale_deferred_disc(const std::shared_ptr<const void>& session);
 void aml_dv_set_osd_max(int max);
@@ -370,6 +372,8 @@ void aml_dv_send_hdr10_data();
 unsigned int aml_gui_dv_output_mode();
 bool aml_hdr10_metadata_limits_supported();
 void aml_apply_hdr10_metadata_limits();
+bool aml_hdr10_seamless_transitions_supported();
+void aml_apply_hdr10_seamless_transitions();
 void aml_dv_send_el_type();
 void aml_dv_send_profile(int dvprofile);
 void set_vsvdb_payload_ver(enum DV_TYPE dv_type, int max_lum_nits_value, int source_max_pq,

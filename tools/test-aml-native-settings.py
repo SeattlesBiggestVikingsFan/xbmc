@@ -103,6 +103,7 @@ void effect(const std::string& name,int value=0){
 AMLDVCapability aml_read_dv_cap(){assert(!inCallback);assert(session&&!session->AcquireDecoder());return {};}
 void aml_set_audio_ddr_urgent(bool v){effect("ddr",v);}
 void aml_apply_hdr10_metadata_limits(){effect("limits");}
+void aml_apply_hdr10_seamless_transitions(){effect("seamless");}
 void aml_dv_apply_graphics_stability(){effect("stable",settings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_GRAPHICS_STABLE));}
 void aml_dv_set_osd_max(int v){effect("gui",v);}
 void aml_dv_set_osd_brightness(int v){effect("osd",v);}
@@ -112,6 +113,7 @@ void aml_dv_set_sdr_keep_ext(bool v){effect("keep",v);}
 void aml_dv_set_target_min_lum(int v){effect("min",v);}
 void aml_dv_apply_l5_override_sysfs(){effect("override");}
 void aml_dv_apply_l5_sysfs(){effect("l5");}
+void aml_dv_refresh_vsvdb_live(){effect("vsvdb");}
 void aml_dv_detect_active_area_stop(){effect("stop");}
 void set_vsvdb_payload_ver(DV_TYPE,int,int, const AMLDVCapability&){effect("payload");}
 @BOOST@
@@ -159,7 +161,7 @@ void ordered_fresh_apply(){
  std::promise<void> done;auto finished=done.get_future();
  effectHook=[&](const std::string& name,int){if(name=="payload")done.set_value();};
  permit.reset();assert(finished.wait_for(3s)==std::future_status::ready);drain(dv);
- const std::vector<std::pair<std::string,int>> expected={{"osd",50},{"gui",400},{"payload",0}};
+ const std::vector<std::pair<std::string,int>> expected={{"osd",50},{"gui",400},{"payload",0},{"vsvdb",0}};
  assert(snapshot()==expected);assert(!dv.m_deferredWork.Failure());
 }
 void later_batch_and_retirement(){
@@ -226,7 +228,8 @@ void policy_cases(){
   std::promise<void> done;auto completed=done.get_future();
   effectHook=[&](const std::string& name,int){if(name=="payload"||name=="stop")done.set_value();};
   changed(key,1);assert(completed.wait_for(3s)==std::future_status::ready);drain(dv);
-  const std::vector<std::pair<std::string,int>> expected={{"override",0},{"l5",0},{std::string(key)==KEY(LEVEL5_OVERRIDE)?"stop":"payload",0}};
+  std::vector<std::pair<std::string,int>> expected={{"override",0},{"l5",0},{std::string(key)==KEY(LEVEL5_OVERRIDE)?"stop":"payload",0}};
+  if(std::string(key)!=KEY(LEVEL5_OVERRIDE))expected.emplace_back("vsvdb",0);
   assert(snapshot()==expected);
  }
 }
@@ -273,6 +276,7 @@ def main():
           ('drop rest of failed batch','failure = std::current_exception();','failure = std::current_exception();\n          break;'),
           ('ignore playback policy','aml_is_dv_enable() && aml_dv_playback_active() &&','aml_is_dv_enable() &&'),
           ('omit L5 flags','    aml_dv_apply_l5_sysfs();','    /* omit flags */'),
+          ('omit live VSVDB refresh','    aml_dv_refresh_vsvdb_live();','    /* omit refresh */'),
         ]:
             assert old in code,label
             run(code.replace(old,new),negative=True);print('REJECTED:',label)

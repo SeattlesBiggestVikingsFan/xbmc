@@ -1518,6 +1518,24 @@ void aml_apply_hdr10_metadata_limits()
   CSysfsPath("/sys/module/hdmitx20/parameters/xbmc_hdr10_max_cll_override").Set(maxCll);
 }
 
+static const char* const AML_NATIVE_HDR_MUTE_BYPASS =
+    "/sys/class/amhdmitx/amhdmitx0/native_hdr_mute_bypass";
+
+bool aml_hdr10_seamless_transitions_supported()
+{
+  return CSysfsPath(AML_NATIVE_HDR_MUTE_BYPASS).Exists();
+}
+
+void aml_apply_hdr10_seamless_transitions()
+{
+  if (!aml_hdr10_seamless_transitions_supported())
+    return;
+
+  // The kernel only skips the mute when transport is unchanged and the target is plain HDR10.
+  const bool enabled = settings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS);
+  CSysfsPath(AML_NATIVE_HDR_MUTE_BYPASS).Set(enabled ? 1 : 0);
+}
+
 void aml_dv_send_hdr10_data()
 {
   HDRStaticMetadataInfo hdrStaticMetadataInfo;
@@ -2148,6 +2166,23 @@ void aml_dv_complete_output_transition(const std::shared_ptr<const void>& sessio
   if (session && transition && transition->session == session && transition->programmed.load())
     std::atomic_compare_exchange_strong(&s_dvOutputTransition, &transition,
                                        std::shared_ptr<AMLDVOutputTransition>{});
+}
+
+void aml_dv_begin_startup_output_transition(const std::shared_ptr<const void>& session,
+                                          bool startupBlackout)
+{
+  CDVCoreGuard dvlock(__FUNCTION__);
+  if (!startupBlackout || !session || session != std::atomic_load(&s_dvPlaybackSession))
+    return;
+
+  // An applied first frame can precede the fullscreen refresh switch even in
+  // Bypass/SDR. Gate it on display completion without DV programming, retaining
+  // any native-DV transition already established by aml_dv_open().
+  auto transition = std::make_shared<AMLDVOutputTransition>(
+      session, DOLBY_VISION_OUTPUT_MODE_BYPASS);
+  transition->programmed = true;
+  std::shared_ptr<AMLDVOutputTransition> expected;
+  std::atomic_compare_exchange_strong(&s_dvOutputTransition, &expected, transition);
 }
 
 bool aml_dv_deferred_disc_pending(const std::shared_ptr<const void>& session, bool staleOnly)

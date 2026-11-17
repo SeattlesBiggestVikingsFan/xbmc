@@ -481,6 +481,18 @@ void CalculateVSVDBPayload_2(const AMLDVCapability& cap)
   settings()->SetString(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB_PAYLOAD, ss.str());
 }
 
+enum TV_PRESET : int
+{
+  TV_PRESET_MANUAL = 0,
+  TV_PRESET_AUTO,
+  TV_PRESET_LG,
+  TV_PRESET_SONY,
+  TV_PRESET_SAMSUNG,
+  TV_PRESET_PANASONIC,
+  TV_PRESET_PHILIPS,
+  TV_PRESET_TCL
+};
+
 static bool force_modes() {
   return settings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_FORCE_MODES);
 }
@@ -535,9 +547,15 @@ static AMLDVOptions read_dv_options()
 
 void dv_type_filler(const SettingConstPtr& setting, std::vector<IntegerSettingOption>& list, int& current, void* data) {
   const auto cap = read_dv_options();
+  const auto preset = std::static_pointer_cast<const CSettingInt>(
+      settings()->GetSetting(CSettings::SETTING_COREELEC_AMLOGIC_DV_TV_PRESET));
+  int presetValue;
+  if (!preset || !preset->TryGetValue(presetValue))
+    throw CSettingOptionsPending{};
+  const bool manual = presetValue == TV_PRESET_MANUAL;
   list.clear();
   if (cap.standard) list.emplace_back(g_localizeStrings.Get(60023), DV_TYPE_DISPLAY_LED);
-  if (cap.lowLatency) list.emplace_back(g_localizeStrings.Get(60024), DV_TYPE_PLAYER_LED_LLDV);
+  if (cap.lowLatency || manual) list.emplace_back(g_localizeStrings.Get(60024), DV_TYPE_PLAYER_LED_LLDV);
   if (cap.pq) list.emplace_back(g_localizeStrings.Get(60025), DV_TYPE_PLAYER_LED_HDR);
   if (cap.pq) list.emplace_back(g_localizeStrings.Get(60579), DV_TYPE_PLAYER_LED_HDR2);
   list.emplace_back(g_localizeStrings.Get(60026), DV_TYPE_VS10_ONLY);
@@ -759,18 +777,6 @@ static void set_dv_settings_visible(bool show)
   set_visible(CSettings::SETTING_COREELEC_AMLOGIC_DV_KEEP_SDR_STATE, show);
   set_visible(CSettings::SETTING_COREELEC_AMLOGIC_DV_ENGAGE_AT_STARTUP, show);
 }
-
-enum TV_PRESET : int
-{
-  TV_PRESET_MANUAL = 0,
-  TV_PRESET_AUTO,
-  TV_PRESET_LG,
-  TV_PRESET_SONY,
-  TV_PRESET_SAMSUNG,
-  TV_PRESET_PANASONIC,
-  TV_PRESET_PHILIPS,
-  TV_PRESET_TCL
-};
 
 // Scheduling state for deferred preset application. When the preset setting changes,
 // the apply is deferred to a detached thread so it runs after the current event handling
@@ -1046,6 +1052,7 @@ bool CDolbyVisionAML::Setup(CAMLSession::DisplayRequest display)
   settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_LIMITER);
   settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_LUMINANCE);
   settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_CLL);
+  settingSet.insert(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS);
   settingsManager->RegisterCallback(this, settingSet);
 
   // These controls also work with native HDR10 on devices without DV support.
@@ -1054,6 +1061,9 @@ bool CDolbyVisionAML::Setup(CAMLSession::DisplayRequest display)
   set_visible(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_LUMINANCE, hdr10Limits);
   set_visible(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_CLL, hdr10Limits);
   aml_apply_hdr10_metadata_limits();
+  set_visible(CSettings::SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS,
+              aml_hdr10_seamless_transitions_supported());
+  aml_apply_hdr10_seamless_transitions();
 
   // Override EDID is always visible (no DV mode dependency) so users can enable DV on non-DV displays
   set_visible(CSettings::SETTING_COREELEC_AMLOGIC_DV_OVERRIDE_EDID, true);
@@ -1154,6 +1164,10 @@ void CDolbyVisionAML::apply_native_setting(const std::string& settingId)
   {
     aml_apply_hdr10_metadata_limits();
   }
+  else if (settingId == CSettings::SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS)
+  {
+    aml_apply_hdr10_seamless_transitions();
+  }
   else if (settingId == CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE_ON_LUMINANCE)
   {
     int max(settings()->GetInt(settingId));
@@ -1238,12 +1252,22 @@ void CDolbyVisionAML::OnSettingChanged(const std::shared_ptr<const CSetting>& se
 {
   if (!setting || m_retiring) return;
 
+  const std::string& settingId = setting->GetId();
+  // The preset setter holds its setting lock; type options can hold the type
+  // lock while reading this preset. Queue preset intent before reading type.
+  if (settingId == CSettings::SETTING_COREELEC_AMLOGIC_DV_TV_PRESET)
+  {
+    schedule_tv_preset_apply(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TV_PRESET));
+    return;
+  }
+
   // Queue independent native switches without entering DV preset policy.
   if (setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_DV_GRAPHICS_STABLE ||
       setting->GetId() == CSettings::SETTING_COREELEC_AUDIO_DDR_PRIORITY ||
       setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR10_LIMITER ||
       setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_LUMINANCE ||
-      setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_CLL)
+      setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR10_MAX_CLL ||
+      setting->GetId() == CSettings::SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS)
   {
     schedule_native_setting_apply(setting->GetId());
     return;
@@ -1260,14 +1284,6 @@ void CDolbyVisionAML::OnSettingChanged(const std::shared_ptr<const CSetting>& se
   unsigned int dv_vp(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VIDEO_PROCESSOR));
 
   bool dv_type_vp_auto(settings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE_VP_AUTO));
-
-  const std::string& settingId = setting->GetId();
-
-  if (settingId == CSettings::SETTING_COREELEC_AMLOGIC_DV_TV_PRESET)
-  {
-    schedule_tv_preset_apply(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TV_PRESET));
-    return;
-  }
 
   // Any direct user edit of a DV setting (not driven by a preset apply) invalidates
   // the preset state — flip it to Manual so the label doesn't misrepresent what's active.
