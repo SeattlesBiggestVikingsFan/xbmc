@@ -3890,7 +3890,7 @@ CVideoSeekQueueState CVideoPlayer::GetVideoSeekQueueState()
 {
   // The recovery seek has its own message type so it cannot coalesce away a user seek.
   CVideoSeekQueueState state;
-  state.userTimeSeeks = m_messenger.GetPacketCount(CDVDMsg::PLAYER_SEEK);
+  state.userTimeSeeks = m_messenger.GetUserTimeSeekCount();
   state.userChapterSeeks = m_messenger.GetPacketCount(CDVDMsg::PLAYER_SEEK_CHAPTER);
   return state;
 }
@@ -4526,7 +4526,8 @@ void CVideoPlayer::HandleMessages()
       // do a seek after rewind, clock is not in sync with current pts
       if ((speed == DVD_PLAYSPEED_NORMAL) &&
           (m_playSpeed != DVD_PLAYSPEED_NORMAL) &&
-          (m_playSpeed != DVD_PLAYSPEED_PAUSE))
+          (m_playSpeed != DVD_PLAYSPEED_PAUSE) &&
+          !GetVideoSeekQueueState().HasQueuedUserSeek())
       {
         double iTime = m_VideoPlayerVideo->GetCurrentPts();
         if (iTime == DVD_NOPTS_VALUE)
