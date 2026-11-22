@@ -424,7 +424,8 @@ bool CRenderManager::Configure()
       m_amlPresenter = std::make_shared<CAMLPresenterSession>(
           aml->PresenterCodec(), m_dvdClock, m_QueueSize, m_processInfoLifetime,
           [this](bool enabled) { m_playerPort->UpdateClockSync(enabled); },
-          [this](double pts) { m_dataCacheCore.SetRenderPts(pts); });
+          [this](double pts) { m_dataCacheCore.SetRenderPts(pts); },
+          [this] { return m_dataCacheCore.IsFrameAdvance(); });
       if (UpdateAMLPresenter())
       {
         m_amlPresenter->queue->Show(m_showVideo);
@@ -547,8 +548,8 @@ void CRenderManager::FrameMove()
         static_cast<CRendererAML*>(m_pRenderer)->SetPresentationEpoch(observed.epoch);
         auto content = std::static_pointer_cast<const CAMLPresenterSession::OverlayObservation>(observed.payload);
         std::unique_lock<CCriticalSection> present(m_presentlock);
-        SPresent info{observed.pts, content->field, static_cast<EPRESENTMETHOD>(content->method),
-                      content->liveL5};
+        SPresent info{observed.pts, content->field, static_cast<EPRESENTMETHOD>(content->method)};
+        info.liveL5 = content->liveL5;
         m_frameSelection = std::make_shared<const FrameSelection>(FrameSelection{
             -1, -1, info, content->overlays});
         m_presentstarted = true;
@@ -2140,6 +2141,30 @@ void CRenderManager::UpdateAudioLatencyTweak(double audioLatency)
 
 void CRenderManager::PrepareNextRender()
 {
+  bool pausedStep = false;
+#if defined(HAS_LIBAMCODEC)
+  bool paused;
+  int64_t advanceCount;
+  const double frameOnScreen = m_dvdClock.GetClock(paused, advanceCount);
+  int64_t consumedAdvances = advanceCount;
+  if (auto* aml = dynamic_cast<CRendererAML*>(m_pRenderer); aml && m_presentstarted)
+  {
+    const auto* buffer = dynamic_cast<CAMLVideoBuffer*>(aml->PresentationBuffer(m_presentsource));
+    const auto codec = buffer ? buffer->Codec() : nullptr;
+    // A display fence can reopen; an obsolete decoder epoch cannot hold a pause.
+    const bool selectedValid =
+        codec && !codec->IsOperationInvalidated(buffer->OperationEpoch());
+    const bool frameAdvance = m_dataCacheCore.IsFrameAdvance();
+    if (!paused || !frameAdvance)
+      m_Queue[m_presentsource].advanceCount = advanceCount;
+    consumedAdvances = m_Queue[m_presentsource].advanceCount;
+    if (paused && selectedValid && (!frameAdvance || advanceCount == consumedAdvances) && !m_forceNext)
+      return;
+    pausedStep = paused && frameAdvance && advanceCount != consumedAdvances && !m_forceNext;
+  }
+#else
+  const double frameOnScreen = m_dvdClock.GetClock();
+#endif
   if (m_queued.empty())
   {
     CLog::Log(LOGERROR, "CRenderManager::PrepareNextRender - asked to prepare with nothing available");
@@ -2165,7 +2190,6 @@ void CRenderManager::PrepareNextRender()
       m_audioLatencyTweak -
       m_videoDelay);
 
-  double frameOnScreen = m_dvdClock.GetClock();
   double renderPts = frameOnScreen + m_displayLatency;
 
   int nextFrameIndex = m_queued.front();
@@ -2175,21 +2199,23 @@ void CRenderManager::PrepareNextRender()
 
   if (m_clockSync.m_enabled)
   {
-    double err = fmod(renderPts - nextFramePts, frametime);
-    m_clockSync.m_error += err;
-    m_clockSync.m_errCount ++;
-    if (m_clockSync.m_errCount > 30)
+    if (!pausedStep)
     {
-      double average = m_clockSync.m_error / m_clockSync.m_errCount;
-      m_clockSync.m_syncOffset = average;
-      m_clockSync.m_error = 0;
-      m_clockSync.m_errCount = 0;
-
-      m_dvdClock.SetVsyncAdjust(-average);
+      double err = fmod(renderPts - nextFramePts, frametime);
+      m_clockSync.m_error += err;
+      m_clockSync.m_errCount ++;
+      if (m_clockSync.m_errCount > 30)
+      {
+        double average = m_clockSync.m_error / m_clockSync.m_errCount;
+        m_clockSync.m_syncOffset = average;
+        m_clockSync.m_error = 0;
+        m_clockSync.m_errCount = 0;
+        m_dvdClock.SetVsyncAdjust(-average);
+      }
     }
     renderPts += frametime / 2 - m_clockSync.m_syncOffset;
   }
-  else
+  else if (!pausedStep)
   {
     m_dvdClock.SetVsyncAdjust(0);
   }
@@ -2214,7 +2240,7 @@ void CRenderManager::PrepareNextRender()
     if (m_presentstarted) m_discard.push_back(m_presentsource);
 
     double diff = (renderPts - nextFramePts);
-    while (diff > 62000 && m_queued.size() > 2)
+    while (!pausedStep && diff > 62000 && m_queued.size() > 2)
     {
       // skip late frames if possible; if the queue is almost empty, we don't skip
       // even if we should to avoid emptying the queue too fast
@@ -2232,6 +2258,10 @@ void CRenderManager::PrepareNextRender()
     m_lateframes = static_cast<int>(std::max(0.0, diff / frametime));
     m_presentstep = PRESENT_FLIP;
     m_presentsource = idx;
+#if defined(HAS_LIBAMCODEC)
+    m_Queue[m_presentsource].advanceCount =
+        pausedStep ? consumedAdvances + (advanceCount > consumedAdvances ? 1 : -1) : advanceCount;
+#endif
     m_presentstarted = true;
     m_queued.pop_front();
     m_presentpts = m_Queue[m_presentsource].pts;
@@ -2246,6 +2276,10 @@ void CRenderManager::PrepareNextRender()
     // not a past frame and may alias the new source or an unpublished slot.
     m_presentsourcePast = m_presentstarted ? m_presentsource : -1;
     m_presentsource = m_queued.front();
+#if defined(HAS_LIBAMCODEC)
+    m_Queue[m_presentsource].advanceCount =
+        pausedStep ? consumedAdvances + (advanceCount > consumedAdvances ? 1 : -1) : advanceCount;
+#endif
     m_presentstarted = true;
     m_queued.pop_front();
     m_presentpts = m_Queue[m_presentsource].pts - frametime / 2;
@@ -2400,7 +2434,9 @@ void CRenderManager::RestoreAMLPresenter(uint64_t lifecycle, uint64_t flush,
     observation->field = m_Queue[index].presentfield;
     observation->method = static_cast<CAMLPresenter::Method>(m_Queue[index].presentmethod);
     imported.push_back(index);
-    return std::make_shared<CAMLPresenterSession::Frame>(picture, std::move(observation));
+    auto frame = std::make_shared<CAMLPresenterSession::Frame>(picture, std::move(observation));
+    frame->advanceCount = m_Queue[index].advanceCount;
+    return frame;
   };
   if (m_presentstarted)
   {
@@ -2429,6 +2465,7 @@ void CRenderManager::RestoreAMLPresenter(uint64_t lifecycle, uint64_t flush,
         codec, m_dvdClock, m_QueueSize, m_processInfoLifetime,
         [this](bool enabled) { m_playerPort->UpdateClockSync(enabled); },
         [this](double pts) { m_dataCacheCore.SetRenderPts(pts); },
+        [this] { return m_dataCacheCore.IsFrameAdvance(); },
         std::move(current), std::move(queued), aml->PreviousPts());
   }
   catch (const std::exception& error)
@@ -2601,8 +2638,9 @@ void CRenderManager::StopAMLPresenter(bool migrate)
       m_pRenderer->AddVideoPicture(frame->picture, index);
       m_overlays.SetOverlays(overlays->overlays, index);
       m_Queue[index] = {frame->pts, overlays->field, static_cast<EPRESENTMETHOD>(frame->method),
-                        frame->picture.amlFrameL5,
-                        frame->overlayContent == CAMLPresenter::OverlayContent::TEXT};
+                        frame->advanceCount};
+      m_Queue[index].liveL5 = frame->picture.amlFrameL5;
+      m_Queue[index].timedText = frame->overlayContent == CAMLPresenter::OverlayContent::TEXT;
       if (!m_presentstarted)
       {
         m_presentsource = index;
