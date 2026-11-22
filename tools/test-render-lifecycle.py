@@ -751,6 +751,7 @@ struct CVideoPlayer
   int joins{0}, stopped{0};
   std::shared_ptr<CRenderLifecycle::Request> exitRequest;
   bool CloseFile(bool reopen);
+  void ClearSeekTarget() {}
   void StopThread(bool wait)
   {
     assert(CServiceBroker::GetWinSystem()->graphics.released == 1);
