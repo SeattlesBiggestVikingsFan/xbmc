@@ -17890,7 +17890,7 @@ msgstr ""
 #. Description of setting with label #421 "Keep audio device alive"
 #: system/settings/settings.xml
 msgctxt "#34111"
-msgid "Select the behaviour when no sound is required for either playback or GUI sounds.[CR][Always] Continuous inaudible signal is output, this keeps the receiving audio device alive for any new sounds, however this might also block sound from other applications.[CR][1-10 Minutes] Same as [Always] except that after the selected period of time audio enters a suspended state.[CR][Off] Audio output enters a suspended state. Note: Sounds can be missed if audio enters suspended state."
+msgid "Select the behaviour when no sound is required for either playback or GUI sounds.[CR][Always] Continuous inaudible signal is output, this keeps the receiving audio device alive for any new sounds, however this might also block sound from other applications.[CR][1-10 Minutes] Same as [Always] except that after the selected period of time audio enters a suspended state. While playback is paused, the audio device is kept alive until playback resumes or stops, except for passthrough via AudioTrack (RAW).[CR][Off] Audio output enters a suspended state. Note: Sounds can be missed if audio enters suspended state."
 msgstr ""
 
 #. Indicates if Audio Engine should transmit noise or real silence
@@ -25833,25 +25833,13 @@ msgstr ""
 #. Setting label for AC3/EAC3 dialogue normalisation defeat
 #: system/settings/settings.xml
 msgctxt "#55003"
-msgid "AC3 / EAC3 dialogue normalisation defeat (0 dB)"
+msgid "AC3 / non-Atmos EAC3 dialogue normalisation defeat (0 dB)"
 msgstr ""
 
 #. Setting help for AC3/EAC3 dialogue normalisation defeat
 #: system/settings/settings.xml
 msgctxt "#55004"
-msgid "Force the dialogue normalisation value to (0 dB) in AC3 and EAC3 bitstreams. This disables receiver-side dialogue normalisation, preventing unwanted volume reduction during passthrough playback."
-msgstr ""
-
-#. Setting label for EAC3 Atmos dialogue normalisation defeat
-#: system/settings/settings.xml
-msgctxt "#55005"
-msgid "Include EAC3 Atmos (breaks Atmos)"
-msgstr ""
-
-#. Setting help for EAC3 Atmos dialogue normalisation defeat
-#: system/settings/settings.xml
-msgctxt "#55006"
-msgid "Also apply dialogue normalisation defeat to EAC3 Dolby Atmos (DD+ Atmos) streams. This will disable Dolby Atmos object audio rendering — your receiver will fall back to standard Dolby Digital Plus surround. Safe to enable if your setup does not support Atmos."
+msgid "Disable receiver-side dialogue normalisation for AC3 and non-Atmos EAC3 during passthrough playback. DD+ Atmos retains its original dialogue normalisation and loudness to preserve Atmos rendering."
 msgstr ""
 
 #. Setting label for broken / truncated file detection
@@ -27487,6 +27475,16 @@ msgstr ""
 #: system/settings/settings.xml
 msgctxt "#60627"
 msgid "For Player-Led output on projectors whose automatic dynamic-range detection flip-flops between SDR and HDR. Re-applies the Dolby Vision / VS10 output after the resolution switches at playback start (the same effect as manually toggling the VS10 mode). May cause a brief blip at playback start, so leave this off unless you actually see SDR/HDR flickering."
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#60628"
+msgid "Seamless SDR/HDR10 switching"
+msgstr ""
+
+#: system/settings/settings.xml
+msgctxt "#60629"
+msgid "Avoids display resyncs when switching between SDR and HDR10 at the same resolution and refresh rate. SDR is sent with BT.2020 colourimetry (colour-converted, so it should look unchanged), and HDR10 is signalled while the video loads so the display can switch before the picture appears. Only plain HDR10 (or a Dolby Vision base layer when Dolby Vision output is off) is affected; HDR10+, HLG, Dolby Vision output and display mode changes use the normal path. Turn off if menus show wrong colours, the display fails to enter HDR, or the picture is corrupted."
 msgstr ""
 
 #. "Dolby Vision HDR Bypass"

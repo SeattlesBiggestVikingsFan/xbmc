@@ -284,7 +284,10 @@ protected:
     double         pts;
     EFIELDSYNC     presentfield;
     EPRESENTMETHOD presentmethod;
-    AML_FRAME_L5::Bounds liveL5;
+#if defined(HAS_LIBAMCODEC)
+    int64_t advanceCount{0};
+#endif
+    AML_FRAME_L5::Bounds liveL5{};
 #if defined(HAS_LIBAMCODEC)
     bool timedText{false};
 #endif

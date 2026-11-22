@@ -516,6 +516,10 @@ public:
   static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_LIMITER = "coreelec.amlogic.hdr10.limiter";
   static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_MAX_LUMINANCE = "coreelec.amlogic.hdr10.max.luminance";
   static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_MAX_CLL = "coreelec.amlogic.hdr10.max.cll";
+  static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS =
+      "coreelec.amlogic.hdr10.seamless.transitions";
+  static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_MIGRATION_VERSION =
+      "coreelec.amlogic.hdr10.seamless.migration.version";
   static constexpr auto SETTING_COREELEC_AMLOGIC_LIMIT_CD = "coreelec.amlogic.limitcd";
   static constexpr auto SETTING_COREELEC_AMLOGIC_FORCE_CS = "coreelec.amlogic.forcecs";
   static constexpr auto SETTING_COREELEC_AMLOGIC_DISABLEGUISCALING = "coreelec.amlogic.disableguiscaling";
@@ -581,7 +585,6 @@ public:
   static constexpr auto SETTING_COREELEC_AMLOGIC_VIDEO_RESTART_MUTE_DV_ONLY = "coreelec.amlogic.video.restart.mute.dvonly";
   static constexpr auto SETTING_COREELEC_AMLOGIC_VIDEO_RESTART_MUTE_SETTLE = "coreelec.amlogic.video.restart.mute.settle";
   static constexpr auto SETTING_COREELEC_AUDIO_AC3_DIALNORM = "coreelec.audio.ac3.dialnorm";
-  static constexpr auto SETTING_COREELEC_AUDIO_EAC3_ATMOS_DIALNORM = "coreelec.audio.eac3.atmos.dialnorm";
   static constexpr auto SETTING_COREELEC_AUDIO_TRUEHD_ATMOS_DIALNORM = "coreelec.audio.truehd.atmos.dialnorm";
   static constexpr auto SETTING_COREELEC_AUDIO_DTS_DIALNORM = "coreelec.audio.dts.dialnorm";
   static constexpr auto SETTING_COREELEC_AUDIO_DDR_PRIORITY = "coreelec.audio.ddr_priority";
@@ -763,6 +766,7 @@ private:
   CSettings const& operator=(CSettings const&) = delete;
 
   bool Load(const TiXmlElement* root, bool& updated);
+  bool MigrateSeamlessTransitions(const std::string& file, bool& updated);
 
   // implementation of ISubSettings
   bool Load(const TiXmlNode* settings) override;
