@@ -133,13 +133,8 @@ private:
 
   // Cached settings (updated via callback, read in hot path)
   std::atomic<bool> m_defeatAC3DialNorm{false};
-  std::atomic<bool> m_defeatEAC3AtmosDialNorm{false};
   std::atomic<bool> m_defeatTrueHDDialNorm{false};
   std::atomic<bool> m_defeatDTSDialNorm{false};
-
-  // E-AC-3 JOC/Atmos: dialnorm defeat must be skipped because modifying BSI
-  // dialnorm breaks JOC rendering (receiver cross-checks against OAMD metadata)
-  bool m_isEAC3JOC{false};
 
   //============================================================================
   // Internal Clock A/V Sync

@@ -581,7 +581,6 @@ public:
   static constexpr auto SETTING_COREELEC_AMLOGIC_VIDEO_RESTART_MUTE_DV_ONLY = "coreelec.amlogic.video.restart.mute.dvonly";
   static constexpr auto SETTING_COREELEC_AMLOGIC_VIDEO_RESTART_MUTE_SETTLE = "coreelec.amlogic.video.restart.mute.settle";
   static constexpr auto SETTING_COREELEC_AUDIO_AC3_DIALNORM = "coreelec.audio.ac3.dialnorm";
-  static constexpr auto SETTING_COREELEC_AUDIO_EAC3_ATMOS_DIALNORM = "coreelec.audio.eac3.atmos.dialnorm";
   static constexpr auto SETTING_COREELEC_AUDIO_TRUEHD_ATMOS_DIALNORM = "coreelec.audio.truehd.atmos.dialnorm";
   static constexpr auto SETTING_COREELEC_AUDIO_DTS_DIALNORM = "coreelec.audio.dts.dialnorm";
   static constexpr auto SETTING_COREELEC_AUDIO_DDR_PRIORITY = "coreelec.audio.ddr_priority";
