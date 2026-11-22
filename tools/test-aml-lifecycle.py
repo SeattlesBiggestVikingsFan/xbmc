@@ -220,6 +220,8 @@ void aml_subtitle_active_area_invalidate(bool = false,bool = false){++subtitleIn
 // Cache semantics are exercised with production bodies in test-dv-backend-info.py.
 void aml_dv_backend_invalidate(const std::shared_ptr<const void>&) {}
 void aml_dv_backend_pause(const std::shared_ptr<const void>&,bool) {}
+void aml_dv_codec_pending(bool) {}
+void aml_hdr10_prearm_cancel(uint64_t) {}
 @DV_CANCEL@
 class CAMLCodec {
 public:
@@ -327,6 +329,8 @@ public:
   struct {DOVIELType dovi_el_type{DOVIELType::NONE}; int codec{AV_CODEC_ID_H264};} m_hints;
   struct {float speed{1.0f}; float GetSpeed() const {return speed;}} m_dataCacheCore;
   bool m_resetCleanupPending{false};
+  bool m_dvCodecPending{false};
+  uint64_t m_hdrPrearm{0};
   std::optional<int> m_pendingInput;
   std::shared_ptr<int> m_videoBufferPool{std::make_shared<int>(1)};
   struct {int iFlags{1};} m_videobuffer;

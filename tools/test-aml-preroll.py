@@ -50,6 +50,7 @@ PREFIX = r'''
 #include <string>
 #include <vector>
 #include "cores/VideoPlayer/Interface/TimingConstants.h"
+#include "utils/AMLFrameL5.h"
 constexpr int UNIT_FREQ = 96000;
 constexpr int STREAM_TYPE_STREAM = 1;
 constexpr int AV_CODEC_ID_HEVC = 1, AV_CODEC_ID_VC1 = 2, AV_CODEC_ID_WMV3 = 3;
@@ -64,6 +65,7 @@ struct VideoPicture
   MPEG2OutputMode mpeg2OutputMode = MPEG2OutputMode::UNKNOWN;
   double iDuration = 0, dts = DVD_NOPTS_VALUE, pts = DVD_NOPTS_VALUE;
   std::shared_ptr<const void> amlDVSession;
+  AML_FRAME_L5::Bounds amlFrameL5{};
   std::string stereoMode;
 };
 struct CDVDVideoCodec
@@ -102,7 +104,7 @@ struct Session { bool AcquireDecoder() { return true; } };
 class CAMLCodec
 {
 public:
-  struct Frame { uint64_t pts; uint32_t index; bool interlaced; };
+  struct Frame { uint64_t pts; uint32_t index; bool interlaced; AML_FRAME_L5::Bounds liveL5{}; };
   std::deque<Frame> incoming, m_reorderQueue;
   Private storage;
   Private* am_private = &storage;

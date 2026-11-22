@@ -24,6 +24,7 @@ def function(s, sig):
 PRELUDE = r'''
 #include "cores/VideoPlayer/DVDCodecs/Video/AMLSession.h"
 #include "utils/AMLVideoMute.h"
+#include "utils/AMLFrameL5.h"
 #include <cassert>
 #include <cmath>
 #include <cerrno>
@@ -77,7 +78,7 @@ public:
  int m_videoHoldTimeoutMs=3000,m_pollDevice=7;
  std::chrono::steady_clock::time_point m_videoHoldStart;
  std::unique_ptr<Device> m_amlVideoFile=std::make_unique<Device>();
- struct Frame {uint64_t pts,index;bool interlaced=false;}; std::deque<Frame> m_reorderQueue;
+ struct Frame {uint64_t pts,index;bool interlaced=false;AML_FRAME_L5::Bounds liveL5{};}; std::deque<Frame> m_reorderQueue;
  uint64_t m_prev_last_pts=0,m_last_pts=0,m_cur_pts=0,m_bufferIndex=0;
  double m_prerollTarget=DVD_NOPTS_VALUE;
  bool m_keepMPEG2Progressive=false;
@@ -94,7 +95,7 @@ public:
  static bool ReadVideoPresentation(VideoPresentation&);
  int PollFrame(const CAMLSession::Permit&);
  int ReleaseFrame(uint32_t,uint64_t,const CAMLSession::Permit&,bool=false);
- void DQBuf(){m_reorderQueue.push_back({5,3});struct {int iFlags=0;double dts=0,pts=0;MPEG2OutputMode mpeg2OutputMode=MPEG2OutputMode::UNKNOWN;} videoPicture; @DQBUF@ (void)videoPicture;}
+ void DQBuf(){m_reorderQueue.push_back({5,3});struct {int iFlags=0;double dts=0,pts=0;MPEG2OutputMode mpeg2OutputMode=MPEG2OutputMode::UNKNOWN;AML_FRAME_L5::Bounds amlFrameL5{};} videoPicture; @DQBUF@ (void)videoPicture;}
  void Open(){auto r=m_session.Fence();assert(m_session.BeginMutation(r));assert(m_session.Complete(r,true));}
  void Reset(){auto r=m_session.Fence();assert(m_session.BeginMutation(r));HoldVideo(VideoRestartHoldWanted());assert(m_session.Complete(r,true));}
  void Submit(bool drop=false){auto p=m_session.Acquire(m_session.Epoch(),drop);assert(p);ReleaseFrame(3,1,p,drop);}

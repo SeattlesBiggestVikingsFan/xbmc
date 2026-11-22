@@ -392,7 +392,7 @@ public:
   AppPlayer* m_appPlayer=nullptr;
   void LogAMLPresenter(const char*,bool){assert(false);}void StopAMLPresenter(bool){assert(false);}
   bool UpdateAMLPresenter(){assert(false);return false;}
-  enum EPRESENTMETHOD{SINGLE};struct SPresent{double pts;int field;EPRESENTMETHOD method;AML_FRAME_L5::Bounds liveL5;};
+  enum EPRESENTMETHOD{SINGLE};struct SPresent{double pts;int field;EPRESENTMETHOD method;int64_t advanceCount{0};AML_FRAME_L5::Bounds liveL5{};};
   struct FrameSelection{int index,index2;SPresent info;std::vector<int> overlays;};
   std::shared_ptr<const FrameSelection> m_frameSelection;CCriticalSection m_presentlock;
   bool m_presentstarted=false;double m_presentpts=0;Timer m_presentTimer;
