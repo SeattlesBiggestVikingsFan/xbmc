@@ -134,10 +134,50 @@ bool CSettings::Load(const std::string &file)
     if (!Load(file))
       return false;
   }
-  // if the settings had to be updated, we need to save the changes
-  else if (updated)
-    return Save(file);
+  else
+  {
+    if (!MigrateSeamlessTransitions(file, updated))
+      return false;
+    // if the settings had to be updated, we need to save the changes
+    if (updated)
+      return Save(file);
+  }
 
+  return true;
+}
+
+bool CSettings::MigrateSeamlessTransitions(const std::string& file, bool& updated)
+{
+#if defined(HAS_LIBAMCODEC)
+  std::unique_lock<CCriticalSection> lock(m_critical);
+  if (!GetSettingsManager()->GetSetting(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS) ||
+      !GetSettingsManager()->GetSetting(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_MIGRATION_VERSION))
+  {
+    CLog::Log(LOGERROR, "CSettings: seamless transition migration settings are missing");
+    return false;
+  }
+
+  const int version = GetInt(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_MIGRATION_VERSION);
+  if (version >= 1)
+    return true;
+
+  const bool enabled = GetBool(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS);
+  // Values load before SetLoaded(), so callbacks cannot run the sysfs writer here.
+  // Mark first as an additional guard against reentrant setting updates.
+  if (!SetInt(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_MIGRATION_VERSION, 1) ||
+      !SetBool(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS, true) || !Save(file))
+  {
+    CLog::Log(LOGERROR, "CSettings: unable to persist seamless transition migration to {}", file);
+    const bool restoredValue = SetBool(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS, enabled);
+    const bool restoredVersion = SetInt(SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_MIGRATION_VERSION, version);
+    if (!restoredValue || !restoredVersion)
+      CLog::Log(LOGERROR, "CSettings: unable to roll back seamless transition migration");
+    return false;
+  }
+
+  updated = false;
+  CLog::Log(LOGINFO, "CSettings: enabled seamless transitions once for this profile (migration 1)");
+#endif
   return true;
 }
 
