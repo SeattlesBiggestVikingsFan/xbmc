@@ -19064,20 +19064,12 @@ msgid "Prevent receivers from lowering TrueHD Atmos volume through dialogue norm
 msgstr "Verhindert, dass der Receiver TrueHD-Atmos-Ton durch Dialognormalisierung absenkt. Bei Tonspuren mit Evolution-Metadaten bleibt der Originalpegel erhalten."
 
 msgctxt "#55003"
-msgid "AC3 / EAC3 dialogue normalisation defeat (0 dB)"
-msgstr "AC3 / EAC3-Dialognormalisierung deaktivieren (0 dB)"
+msgid "AC3 / non-Atmos EAC3 dialogue normalisation defeat (0 dB)"
+msgstr "AC3 / EAC3 ohne Atmos: Dialognormalisierung deaktivieren (0 dB)"
 
 msgctxt "#55004"
-msgid "Force the dialogue normalisation value to (0 dB) in AC3 and EAC3 bitstreams. This disables receiver-side dialogue normalisation, preventing unwanted volume reduction during passthrough playback."
-msgstr "Dialognormalisierungswert in AC3 und EAC3-Bitstreams auf 0 dB erzwingen. Dadurch wird die receiverseitige Dialognormalisierung deaktiviert und eine unerwünschte Lautstärkereduzierung bei Passthrough-Wiedergabe verhindert."
-
-msgctxt "#55005"
-msgid "Include EAC3 Atmos (breaks Atmos)"
-msgstr "EAC3 Atmos einschließen (deaktiviert Atmos)"
-
-msgctxt "#55006"
-msgid "Also apply dialogue normalisation defeat to EAC3 Dolby Atmos (DD+ Atmos) streams. This will disable Dolby Atmos object audio rendering — your receiver will fall back to standard Dolby Digital Plus surround. Safe to enable if your setup does not support Atmos."
-msgstr "Deaktivierung der Dialognormalisierung auch auf EAC3 Dolby Atmos (DD+ Atmos)-Streams anwenden. Dadurch wird das Dolby Atmos-Objektaudio-Rendering deaktiviert — der Receiver fällt auf standardmäßiges Dolby Digital Plus Surround zurück. Kann bedenkenlos aktiviert werden, wenn die Anlage kein Atmos unterstützt."
+msgid "Disable receiver-side dialogue normalisation for AC3 and non-Atmos EAC3 during passthrough playback. DD+ Atmos retains its original dialogue normalisation and loudness to preserve Atmos rendering."
+msgstr "Deaktiviert die receiverseitige Dialognormalisierung für AC3 und EAC3 ohne Atmos bei Passthrough-Wiedergabe. DD+ Atmos behält die ursprüngliche Dialognormalisierung und Lautstärke bei, damit Atmos weiterhin wiedergegeben wird."
 
 msgctxt "#55007"
 msgid "Detect broken / truncated files"
