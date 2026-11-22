@@ -105,6 +105,14 @@ static bool s_dvPlaybackActive = false;
 // decoder closes of its segment swaps (aml_dv_set_disc_hold). Guarded by the
 // DV-core lock, like s_dvPlaybackActive.
 static bool s_dvDiscHold = false;
+// DV_MODE_ON: the last playback closed with the DV core bypassed (e.g. VS10
+// SDR = Bypass), so the sink is locked to plain SDR. Keep the GUI there rather
+// than re-engaging IPT at Stop: some HDMI repeaters re-lock the downstream
+// display for ~10 s on every SDR <-> DV signalling change, so a restore would
+// add one more such change per SDR title. The next DV/HDR playback engages DV
+// in its own aml_dv_open(); an explicit aml_dv_start() also releases the hold.
+// Guarded by the DV-core lock.
+static bool s_dvGuiSdrHold = false;
 // Amlogic video codecs opened but whose decoder has not yet run aml_dv_open().
 // A GUI restore in that gap would cycle DV under the starting stream. Guarded
 // by the DV-core lock.
@@ -2163,6 +2171,7 @@ void aml_dv_close()
   // in CDolbyVisionAML when playback truly ends.
   if (aml_dv_mode() == DV_MODE_ON)
   {
+    s_dvGuiSdrHold = !aml_is_dv_enable();
     aml_dv_dump_state("dv_close/post(dv_mode_on_skip)");
     return;
   }
@@ -2513,6 +2522,7 @@ static std::mutex s_dvStartMutex;
 // s_dvCoreMutex (ordering: start -> core, never the reverse).
 static void _dv_start_locked()
 {
+  s_dvGuiSdrHold = false;
   if (aml_is_dv_enable())
   {
     unsigned int mode = aml_dv_dolby_vision_mode();
@@ -2576,22 +2586,36 @@ bool aml_dv_restore_gui_ipt(const char* reason)
   // instead of no-oping. Holding the lock across check+cycle makes the
   // decision and the action atomic: a restore that lost the race to a new
   // playback sees playback-active under the lock and skips.
-  if (aml_dv_mode() != DV_MODE_ON || !aml_is_dv_enable() || aml_dv_playback_active())
+  // DV disabled is not a reason to skip: playback that bypasses the DV core
+  // (e.g. VS10 SDR = bypass) leaves enable=N, and _dv_start_locked() re-enables
+  // IPT for DV_MODE_ON in that case.
+  // An opened codec whose decoder has not started yet is playback too: its
+  // aml_dv_open() sets the output mode for the stream.
+  if (aml_dv_mode() != DV_MODE_ON || aml_dv_playback_active() || s_dvCodecsPending > 0)
   {
     CLog::Log(LOGDEBUG,
               "AMLUtils::{} - [{}] skip: DV state changed while queued "
-              "(mode/enable/playback-active)",
+              "(mode/playback-active/codec-pending)",
               __FUNCTION__, reason);
     return false;
   }
 
+  const bool dv_enabled = aml_is_dv_enable();
+  if (s_dvGuiSdrHold && !dv_enabled)
+  {
+    CLog::Log(LOGINFO, "AMLUtils::{} - [{}] keeping SDR GUI after bypassed playback",
+              __FUNCTION__, reason);
+    return false;
+  }
   unsigned int mode = aml_dv_dolby_vision_mode();
-  bool needs_mode_switch = mode != DOLBY_VISION_OUTPUT_MODE_IPT &&
-                            mode != DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL;
+  bool needs_mode_switch = !dv_enabled ||
+                           (mode != DOLBY_VISION_OUTPUT_MODE_IPT &&
+                            mode != DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL);
 
   if (needs_mode_switch)
-    CLog::Log(LOGINFO, "AMLUtils::{} - [{}] restoring GUI IPT (from mode {})",
-              __FUNCTION__, reason, aml_dv_output_mode_to_string(mode));
+    CLog::Log(LOGINFO, "AMLUtils::{} - [{}] restoring GUI IPT (from {}mode {})",
+              __FUNCTION__, reason, dv_enabled ? "" : "DV disabled, ",
+              aml_dv_output_mode_to_string(mode));
   else
     // Already in a GUI-suitable output mode — no mode switch needed, but
     // _dv_start_locked() still re-applies the OSD max luminance that
