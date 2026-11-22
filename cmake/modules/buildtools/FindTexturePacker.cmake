@@ -57,7 +57,7 @@ if(NOT TARGET TexturePacker::TexturePacker::Executable)
       # But skip shipping it if build architecture can be executed on host
       # and TEXTUREPACKER_EXECUTABLE is found
       if(NOT (HOST_CAN_EXECUTE_TARGET AND TEXTUREPACKER_EXECUTABLE))
-        set(INTERNAL_TEXTUREPACKER_INSTALLABLE TRUE CACHE BOOL "" FORCE)
+        set(INTERNAL_TEXTUREPACKER_INSTALLABLE FALSE CACHE BOOL "" FORCE)
       endif()
     endif()
 
