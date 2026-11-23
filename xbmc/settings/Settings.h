@@ -518,6 +518,10 @@ public:
   static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_MAX_CLL = "coreelec.amlogic.hdr10.max.cll";
   static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS =
       "coreelec.amlogic.hdr10.seamless.transitions";
+  static constexpr auto SETTING_COREELEC_AMLOGIC_LLDV_VSIF_SUPPRESS =
+      "coreelec.amlogic.lldv.vsif.suppress";
+  static constexpr auto SETTING_COREELEC_AMLOGIC_LLDV_VSIF_SUPPRESS_ADOPTED =
+      "coreelec.amlogic.lldv.vsif.suppress.adopted";
   static constexpr auto SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_MIGRATION_VERSION =
       "coreelec.amlogic.hdr10.seamless.migration.version";
   static constexpr auto SETTING_COREELEC_AMLOGIC_LIMIT_CD = "coreelec.amlogic.limitcd";
