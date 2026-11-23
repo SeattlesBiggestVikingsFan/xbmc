@@ -4796,6 +4796,20 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
+        <setting id="coreelec.amlogic.lldv.vsif.suppress" type="boolean" label="60652" help="60653">
+          <requirement>HAVE_AMCODEC</requirement>
+          <visible>false</visible>
+          <level>2</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="coreelec.amlogic.lldv.vsif.suppress.adopted" type="boolean" label="60652">
+          <requirement>HAVE_AMCODEC</requirement>
+          <visible>false</visible>
+          <level>4</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
         <setting id="coreelec.amlogic.hdr10.seamless.migration.version" type="integer" label="0">
           <requirement>HAVE_AMCODEC</requirement>
           <visible>false</visible>
