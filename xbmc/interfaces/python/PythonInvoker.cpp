@@ -49,6 +49,7 @@
 
 #include <cassert>
 #include <iterator>
+#include <vector>
 
 #ifdef TARGET_WINDOWS
 extern "C" FILE* fopen_utf8(const char* _Filename, const char* _Mode);
@@ -564,14 +565,25 @@ bool CPythonInvoker::stop(bool abort)
       }
 
 
-      PyThreadState* state = PyInterpreterState_ThreadHead(m_threadState->interp);
-      while (state)
+      std::vector<unsigned long> threadIds;
+      for (PyThreadState* state = PyInterpreterState_ThreadHead(m_threadState->interp); state;
+           state = PyThreadState_Next(state))
       {
-        // Raise a SystemExit exception in python threads
-        Py_XDECREF(state->async_exc);
-        state->async_exc = PyExc_SystemExit;
-        Py_XINCREF(state->async_exc);
-        state = PyThreadState_Next(state);
+        if (state != ts)
+          threadIds.push_back(state->thread_id);
+      }
+
+      // The API also signals the evaluation breaker; a direct async_exc write does not.
+      for (unsigned long threadId : threadIds)
+      {
+        const int matches = PyThreadState_SetAsyncExc(threadId, PyExc_SystemExit);
+        if (matches != 1)
+        {
+          if (matches > 1)
+            PyThreadState_SetAsyncExc(threadId, nullptr);
+          CLog::Log(LOGERROR, "CPythonInvoker({}, {}): cannot interrupt thread {} ({} matches)",
+                    GetId(), m_sourceFile, threadId, matches);
+        }
       }
 
       // If a dialog entered its doModal(), we need to wake it to see the exception
