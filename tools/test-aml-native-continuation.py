@@ -52,6 +52,8 @@ bool aml_hdr10_metadata_limits_supported(){return limitsSupported;}
 void aml_apply_hdr10_metadata_limits(){++limitApplies;}
 bool aml_hdr10_seamless_transitions_supported(){return true;}
 void aml_apply_hdr10_seamless_transitions(){}
+bool aml_lldv_vsif_suppress_supported(){return false;}
+void aml_apply_lldv_vsif_suppress(bool){}
 bool supported=true;
 bool aml_support_dolby_vision(){return supported;}
 void aml_dv_enable_new_backend(){}
