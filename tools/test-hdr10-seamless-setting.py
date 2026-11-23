@@ -393,9 +393,9 @@ def main():
             raise AssertionError('mutant passed: ' + label)
     name = 'CSettings::SETTING_COREELEC_AMLOGIC_HDR10_SEAMLESS_TRANSITIONS'
     for label, old, new in [
-        ('no startup apply', '  aml_apply_hdr10_seamless_transitions();\n\n', '\n'),
+        ('no startup apply', '  aml_apply_hdr10_seamless_transitions();\n', ''),
         ('no callback', f'  settingSet.insert({name});\n', ''),
-        ('no change routing', f' ||\n      setting->GetId() == {name})', ')'),
+        ('no change routing', f'      setting->GetId() == {name} ||\n', ''),
     ]:
         assert old in dv, label
         try:

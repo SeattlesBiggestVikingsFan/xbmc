@@ -104,6 +104,7 @@ AMLDVCapability aml_read_dv_cap(){assert(!inCallback);assert(session&&!session->
 void aml_set_audio_ddr_urgent(bool v){effect("ddr",v);}
 void aml_apply_hdr10_metadata_limits(){effect("limits");}
 void aml_apply_hdr10_seamless_transitions(){effect("seamless");}
+void aml_apply_lldv_vsif_suppress(bool notify){effect("vsif",notify);}
 void aml_dv_apply_graphics_stability(){effect("stable",settings()->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_GRAPHICS_STABLE));}
 void aml_dv_set_osd_max(int v){effect("gui",v);}
 void aml_dv_set_osd_brightness(int v){effect("osd",v);}
@@ -201,6 +202,7 @@ void policy_cases(){
  // Every native setting branch is exercised via real OnSettingChanged dispatch.
  struct Case {const char* key;int value;bool on,play;unsigned int output;std::vector<std::pair<std::string,int>> expected;};
  const std::vector<Case> cases={
+  {CSettings::SETTING_COREELEC_AMLOGIC_LLDV_VSIF_SUPPRESS,1,false,false,DOLBY_VISION_OUTPUT_MODE_IPT,{{"vsif",1}}},
   {KEY(OSD_BRIGHTNESS),80,true,false,DOLBY_VISION_OUTPUT_MODE_IPT,{}},
   {KEY(OSD_BRIGHTNESS),80,true,true,DOLBY_VISION_OUTPUT_MODE_HDR10,{}},
   {KEY(VS10_HDR10_OSD_BRIGHTNESS),70,true,true,DOLBY_VISION_OUTPUT_MODE_HDR10,{{"hdr",70}}},
