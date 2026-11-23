@@ -45,6 +45,7 @@ def harness(sink, engine):
     discard = block(engine, "void CActiveAE::DiscardStream(")
     free = block(discard, "  if (m_streams.empty())")
     return r'''
+#include "cores/AudioEngine/Utils/AEPackIEC61937.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -324,6 +325,7 @@ def main():
             source.write_text(harness(impl, ae_impl))
             subprocess.run(["g++", "-std=c++17", "-Wall", "-Wextra", "-Werror",
                             "-fsanitize=address,undefined", "-fno-pie", "-no-pie",
+                            "-I", str(ROOT / "xbmc"),
                             str(source), "-o", str(binary)], check=True)
             result = subprocess.run([str(binary)], capture_output=True, text=True)
             if name == "production":
