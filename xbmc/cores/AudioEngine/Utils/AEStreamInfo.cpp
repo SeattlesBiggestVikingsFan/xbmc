@@ -879,44 +879,6 @@ void CAEStreamParser::DefeatDTSDialNorm(uint8_t* data, unsigned int size)
   eb[headerSize - 1] = crc & 0xFF;
 }
 
-/* Bounded MSB-first bit reader shared by the Atmos metadata parsers. Any read
-   that would pass the block's declared end is refused and latches the failure,
-   so a short or malformed block reports "unknown" instead of a plausible wrong
-   number - the one outcome that would be worse than no number at all. */
-struct AtmosBitReader
-{
-  const uint8_t* data;
-  unsigned int pos;   /* absolute bit index into data */
-  unsigned int limit; /* one past the last readable bit index */
-  bool ok = true;
-
-  bool Skip(unsigned int n)
-  {
-    if (!ok || n > limit || pos > limit - n)
-    {
-      ok = false;
-      return false;
-    }
-    pos += n;
-    return true;
-  }
-
-  /* At most 32 bits; anything longer is a skip, never a value. */
-  uint32_t Read(unsigned int n)
-  {
-    if (n > 32 || !Skip(n))
-    {
-      ok = false;
-      return 0;
-    }
-
-    uint32_t v = 0;
-    for (unsigned int bit = pos - n; bit < pos; ++bit)
-      v = (v << 1) | ((data[bit >> 3] >> (7 - (bit & 7))) & 1);
-    return v;
-  }
-};
-
 enum class EAC3AtmosStatus
 {
   Unknown,
@@ -935,7 +897,7 @@ static EAC3AtmosStatus EAC3_ReadAtmosStatus(const uint8_t* data, unsigned int si
   if (streamType == 3)
     return EAC3AtmosStatus::Unknown;
 
-  AtmosBitReader br{data, 32, size * 8};
+  AudioBitReader br{data, 32, size * 8};
   const unsigned int fscod = br.Read(2);
   const unsigned int rateCode = br.Read(2);
   if (fscod == 3 && rateCode == 3)
